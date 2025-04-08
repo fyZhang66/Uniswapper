@@ -1,35 +1,46 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { WagmiProvider } from 'wagmi';
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import config from './config/wagmiConfig';
+import '@rainbow-me/rainbowkit/styles.css';
+
+// Import pages
+import SwapPage from './pages/SwapPage';
+// import LiquidityPage from './pages/LiquidityPage';
+
+// Import components (to be created)
+import Header from './components/Header';
+import Footer from './components/Footer';
+
+// Create QueryClient for tanstack/react-query
+const queryClient = new QueryClient();
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activeTab, setActiveTab] = useState('swap');
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+        <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+            <Header activeTab={activeTab} setActiveTab={setActiveTab} />
+            
+            <main className="container mx-auto px-4 py-8 flex-grow">
+              {activeTab === 'swap' ? (
+                <SwapPage />
+              ) : (
+                "TODO"
+                // <LiquidityPage />
+              )}
+            </main>
+            
+            <Footer />
+          </div>
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
 }
 
-export default App
+export default App;
