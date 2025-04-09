@@ -1,6 +1,9 @@
 // src/hooks/useToken.js
 import { useState, useEffect } from "react";
 import { useReadContract, useWriteContract, useAccount } from "wagmi";
+import { readContract } from 'wagmi/actions';
+import config from '../config/wagmiConfig';
+
 import { formatUnits, parseUnits } from "viem";
 import { ERC20_ABI } from "../constants/contracts";
 
@@ -43,23 +46,25 @@ export function useToken(tokenAddress) {
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [address],
-    watch: true,
+    watch: false,
     enabled: !!tokenAddress && !!address,
   });
 
   // Check token allowance
   const checkAllowance = async (ownerAddress, spenderAddress) => {
     if (!tokenAddress || !ownerAddress || !spenderAddress) return BigInt(0);
-
+  
     try {
-      const { data } = await useReadContract({
+      // For wagmi v2, readContract returns the data directly
+      const allowance = await readContract(config, {
         address: tokenAddress,
         abi: ERC20_ABI,
         functionName: "allowance",
+        watch: false,
         args: [ownerAddress, spenderAddress],
       });
-
-      return data || BigInt(0);
+      
+      return allowance || BigInt(0);
     } catch (error) {
       console.error("Error checking allowance:", error);
       return BigInt(0);
@@ -106,6 +111,21 @@ export function useToken(tokenAddress) {
       setFormattedBalance(formatUnits(balanceData, decimals));
     }
   }, [balanceData, decimals]);
+
+  // Refresh balance on address or token change, and every 15 seconds
+  // useEffect(() => {
+  //   if (tokenAddress && address) {
+  //     // Initial fetch
+  //     refetchBalance();
+      
+  //     // Set up periodic refresh
+  //     const intervalId = setInterval(() => {
+  //       refetchBalance();
+  //     }, 15000); // 15 seconds
+      
+  //     return () => clearInterval(intervalId);
+  //   }
+  // }, [tokenAddress, address, refetchBalance]);
 
   return {
     balance,

@@ -7,15 +7,26 @@ export default function TokenSelect({ value, onChange, excludeToken }) {
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef(null);
   
+  // Find the selected token details
   const selectedToken = TOKEN_LIST.find(token => token.address === value);
   
   // Filter out the excluded token and apply search
   const filteredTokens = TOKEN_LIST.filter(token => {
-    const matchesSearch = !searchQuery || 
-      token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      token.name.toLowerCase().includes(searchQuery.toLowerCase());
+    // Exclude the token that's already selected in the other input
+    if (excludeToken && token.address === excludeToken) {
+      return false;
+    }
     
-    return token.address !== excludeToken && matchesSearch;
+    // Apply search filtering
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        token.symbol.toLowerCase().includes(query) || 
+        token.name.toLowerCase().includes(query)
+      );
+    }
+    
+    return true;
   });
 
   // Close dropdown when clicking outside
@@ -53,8 +64,14 @@ export default function TokenSelect({ value, onChange, excludeToken }) {
         ) : (
           <span>Select token</span>
         )}
-        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       

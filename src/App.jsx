@@ -7,7 +7,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 
 // Import pages
 import SwapPage from './pages/SwapPage';
-// import LiquidityPage from './pages/LiquidityPage';
+import LiquidityPage from './pages/LiquidityPage';
 
 // Import components (to be created)
 import Header from './components/Header';
@@ -30,8 +30,7 @@ function App() {
               {activeTab === 'swap' ? (
                 <SwapPage />
               ) : (
-                "TODO"
-                // <LiquidityPage />
+                <LiquidityPage />
               )}
             </main>
             

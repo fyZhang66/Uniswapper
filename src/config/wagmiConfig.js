@@ -3,6 +3,7 @@ import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { http } from 'wagmi';
 import { QueryClient } from '@tanstack/react-query';
 
+const RPC_URL = "https://virtual.mainnet.rpc.tenderly.co/ea2dd410-e28d-4863-8441-f84de967fe7f"
 // Define Tenderly Virtual network as a custom chain
 const tenderlyVirtualChain = {
   id: 1, // Same as Ethereum mainnet ID since it's a fork
@@ -14,8 +15,8 @@ const tenderlyVirtualChain = {
     symbol: 'ETH',
   },
   rpcUrls: {
-    public: { http: ['https://virtual.mainnet.rpc.tenderly.co/4cbb7988-0b91-409b-bbb0-ccee52c414e6'] },
-    default: { http: ['https://virtual.mainnet.rpc.tenderly.co/4cbb7988-0b91-409b-bbb0-ccee52c414e6'] },
+    public: { http: [RPC_URL] },
+    default: { http: [RPC_URL] },
   },
 };
 
