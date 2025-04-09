@@ -12,7 +12,7 @@ A simplified implementation of the UniSwap interface built with React, enabling 
 
 ## Screenshots
 
-
+<img width="1477" alt="image" src="https://github.com/user-attachments/assets/0cf8a38e-8def-424f-9fd4-c76eb970d756" />
 
 ## Getting Started
 
