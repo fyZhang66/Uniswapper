@@ -251,6 +251,84 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
     }
   };
 
+  // Remove liquidity function
+  const removeLiquidity = async (lpAmountInput, slippageTolerance) => {
+    if (!pairAddress || !lpAmountInput || !address) {
+      return;
+    }
+
+    setIsAddingLiquidity(true); // Reuse this state for removing liquidity
+    setError(null);
+
+    try {
+      // Parse LP token amount
+      const lpAmount = parseUnits(lpAmountInput, 18); // LP tokens always have 18 decimals
+
+      // Get current reserves to calculate minimum amounts
+      const { reserveABigInt, reserveBBigInt } = reserves;
+      const totalSupply = await addLiquidityTx({
+        address: pairAddress,
+        abi: PAIR_ABI,
+        functionName: 'totalSupply',
+      });
+      const totalSupplyBigInt = BigInt(totalSupply);
+
+      // Calculate minimum amounts with slippage tolerance
+      const slippageFactor = BigInt(Math.floor((100 - slippageTolerance) * 1000));
+      const denominator = BigInt(100000);
+      const minAmountA = (reserveABigInt * lpAmount * slippageFactor) / (totalSupplyBigInt * denominator);
+      const minAmountB = (reserveBBigInt * lpAmount * slippageFactor) / (totalSupplyBigInt * denominator);
+
+      // Set deadline to 20 minutes from now
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 20);
+
+      // Approve router to spend LP tokens
+      console.log('Approving LP tokens...');
+      const approveTx = await addLiquidityTx({
+        address: pairAddress,
+        abi: PAIR_ABI,
+        functionName: 'approve',
+        args: [CONTRACTS.ROUTER, lpAmount],
+      });
+      setTxHash(approveTx);
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait for approval
+
+      // Remove liquidity
+      console.log('Removing liquidity...');
+      const removeLiquidityTxHash = await addLiquidityTx({
+        address: CONTRACTS.ROUTER,
+        abi: ROUTER_ABI,
+        functionName: 'removeLiquidity',
+        args: [
+          tokenAAddress,
+          tokenBAddress,
+          lpAmount,
+          minAmountA,
+          minAmountB,
+          address,
+          deadline
+        ],
+      });
+
+      setTxHash(removeLiquidityTxHash);
+      setSuccess(true);
+
+      // Wait for transaction to be mined
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Update balances and reserves
+      tokenA.refetchBalance();
+      tokenB.refetchBalance();
+      refetchReserves();
+      refetchLpBalance();
+    } catch (err) {
+      console.error('Error removing liquidity:', err);
+      setError(err.message || 'Failed to remove liquidity');
+    } finally {
+      setIsAddingLiquidity(false);
+    }
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -270,5 +348,6 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
     success,
     calculateOptimalAmount,
     addLiquidity,
+    removeLiquidity,
   };
 }

@@ -22,6 +22,9 @@ export default function LiquidityPage() {
   // Slippage tolerance
   const [slippage, setSlippage] = useState(0.5); // Default 0.5%
   
+  // LP token amount
+  const [lpAmount, setLpAmount] = useState('');
+  
   // Get token details
   const tokenA = useToken(tokenAAddress);
   const tokenB = useToken(tokenBAddress);
@@ -31,10 +34,10 @@ export default function LiquidityPage() {
     pairExists,
     reserves,
     addLiquidity,
+    removeLiquidity,
     calculateOptimalAmount,
     isAddingLiquidity,
     error,
-    txHash,
     lpTokenBalance,
   } = useLiquidity(tokenAAddress, tokenBAddress);
   
@@ -68,18 +71,24 @@ export default function LiquidityPage() {
     }
   };
   
+  // Handle LP token amount change
+  const handleLpAmountChange = (value) => {
+    setLpAmount(value);
+  };
+  
   // Reset fields when tokens change
   useEffect(() => {
     setAmountA('');
     setAmountB('');
+    setLpAmount('');
   }, [tokenAAddress, tokenBAddress]);
   
   return (
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">Add Liquidity</h1>
+        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">Liquidity</h1>
         <p className="text-gray-400 max-w-2xl mx-auto">
-          Provide liquidity to earn fees from trades on this pair
+          Add or remove liquidity to earn fees from trades on this pair
         </p>
       </div>
       
@@ -90,7 +99,7 @@ export default function LiquidityPage() {
           {!isConnected ? (
             <div className="flex flex-col items-center my-10 space-y-4">
               <p className="text-gray-400 text-center mb-4">
-                Connect your wallet to add liquidity
+                Connect your wallet to manage liquidity
               </p>
               <ConnectButton />
             </div>
@@ -213,6 +222,42 @@ export default function LiquidityPage() {
                   </div>
                 </div>
               )}
+
+              {/* Remove Liquidity Section */}
+              {pairExists && lpTokenBalance && Number(lpTokenBalance) > 0 && (
+                <div className="mt-6 pt-6 border-t border-gray-700">
+                  <h3 className="text-lg font-semibold mb-4 text-center">Remove Liquidity</h3>
+                  <div className="bg-gray-700/70 rounded-lg p-4 border border-gray-600">
+                    <div className="flex justify-between mb-2">
+                      <label className="text-gray-400">LP Tokens</label>
+                      <span className="text-gray-400 text-sm">
+                        Balance: {lpTokenBalance}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4">
+                      <input
+                        type="number"
+                        value={lpAmount}
+                        onChange={(e) => handleLpAmountChange(e.target.value)}
+                        placeholder="0.0"
+                        className="bg-transparent text-xl outline-none flex-grow font-medium"
+                      />
+                      <span className="text-gray-400">LP</span>
+                    </div>
+                    
+                    {/* Max button */}
+                    <div className="flex justify-end mt-1">
+                      <button 
+                        onClick={() => handleLpAmountChange(lpTokenBalance)}
+                        className="text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        Max
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Slippage settings */}
               <div className="flex items-center justify-between bg-gray-700/40 rounded-lg p-3">
@@ -249,20 +294,16 @@ export default function LiquidityPage() {
               >
                 {isAddingLiquidity ? 'Adding Liquidity...' : 'Add Liquidity'}
               </button>
-              
-              {/* Transaction hash */}
-              {txHash && (
-                <div className="text-center mt-2 bg-blue-500/10 p-2 rounded border border-blue-500/20">
-                  <p className="text-sm text-gray-400 mb-1">Transaction submitted</p>
-                  <a
-                    href={`https://etherscan.io/tx/${txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 text-sm underline"
-                  >
-                    View on Etherscan
-                  </a>
-                </div>
+
+              {/* Remove Liquidity button */}
+              {pairExists && lpTokenBalance && Number(lpTokenBalance) > 0 && (
+                <button
+                  onClick={() => removeLiquidity(lpAmount, slippage)}
+                  disabled={isAddingLiquidity || !lpAmount || Number(lpAmount) <= 0 || Number(lpAmount) > Number(lpTokenBalance)}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-4"
+                >
+                  {isAddingLiquidity ? 'Removing Liquidity...' : 'Remove Liquidity'}
+                </button>
               )}
             </div>
           )}
