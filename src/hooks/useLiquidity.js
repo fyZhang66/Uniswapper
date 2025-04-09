@@ -227,8 +227,22 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
       // Update balances and reserves
       tokenA.refetchBalance();
       tokenB.refetchBalance();
-      refetchReserves();
-      refetchLpBalance();
+
+      // For first-time liquidity addition, refetch pair address and update states
+      if (!pairExists) {
+        const newPairAddress = await refetchPair();
+        if (newPairAddress.data && newPairAddress.data !== '0x0000000000000000000000000000000000000000') {
+          setPairAddress(newPairAddress.data);
+          setPairExists(true);
+          // After pair is created, fetch reserves and LP balance
+          refetchReserves();
+          refetchLpBalance();
+        }
+      } else {
+        // For existing pairs, just update reserves and LP balance
+        refetchReserves();
+        refetchLpBalance();
+      }
     } catch (err) {
       console.error('Error adding liquidity:', err);
       setError(err.message || 'Failed to add liquidity');
