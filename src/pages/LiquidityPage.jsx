@@ -223,6 +223,15 @@ export default function LiquidityPage() {
                 </div>
               )}
 
+              {/* Add Liquidity button */}
+              <button
+                onClick={() => addLiquidity(amountA, amountB, slippage)}
+                disabled={isAddingLiquidity || !amountA || !amountB || Number(amountA) <= 0 || Number(amountB) <= 0}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isAddingLiquidity ? 'Adding Liquidity...' : 'Add Liquidity'}
+              </button>
+
               {/* Remove Liquidity Section */}
               {pairExists && lpTokenBalance && Number(lpTokenBalance) > 0 && (
                 <div className="mt-6 pt-6 border-t border-gray-700">
@@ -285,15 +294,6 @@ export default function LiquidityPage() {
                   {error}
                 </div>
               )}
-              
-              {/* Add Liquidity button */}
-              <button
-                onClick={() => addLiquidity(amountA, amountB, slippage)}
-                disabled={isAddingLiquidity || !amountA || !amountB || Number(amountA) <= 0 || Number(amountB) <= 0}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isAddingLiquidity ? 'Adding Liquidity...' : 'Add Liquidity'}
-              </button>
 
               {/* Remove Liquidity button */}
               {pairExists && lpTokenBalance && Number(lpTokenBalance) > 0 && (
