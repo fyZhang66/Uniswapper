@@ -15,20 +15,22 @@ export const MAINNET_TOKENS = {
   LINK: "0x514910771AF9Ca656af840dff83E8264EcF986CA",
 };
 
-// Token decimals for common tokens
-export const TOKEN_DECIMALS = {
-  ETH: 18,
-  WETH: 18,
-  USDC: 6,
-  USDT: 6,
-  DAI: 18,
-  SHIB: 18,
-  UNI: 18,
-  LINK: 18,
-};
-
 // Token list for UI display
 export const TOKEN_LIST = [
+  {
+    address: MAINNET_TOKENS.ETH,
+    symbol: "ETH",
+    name: "Ethereum",
+    decimals: 18,
+    logoURI: "https://raw.githubusercontent.com/Uniswap/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png",
+  },
+  {
+    address: MAINNET_TOKENS.SHIB,
+    symbol: "SHIB",
+    name: "SHIBA INU",
+    decimals: 18,
+    logoURI: "https://raw.githubusercontent.com/Uniswap/assets/master/blockchains/ethereum/assets/0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE/logo.png",
+  },
   {
     address: MAINNET_TOKENS.WETH,
     symbol: "WETH",
@@ -76,21 +78,5 @@ export const TOKEN_LIST = [
     decimals: 18,
     logoURI:
       "https://raw.githubusercontent.com/Uniswap/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png",
-  },
-];
-
-// Default token pairs for quick access
-export const DEFAULT_TOKEN_PAIRS = [
-  {
-    tokens: [MAINNET_TOKENS.WETH, MAINNET_TOKENS.USDC],
-    name: "WETH/USDC",
-  },
-  {
-    tokens: [MAINNET_TOKENS.WETH, MAINNET_TOKENS.DAI],
-    name: "WETH/DAI",
-  },
-  {
-    tokens: [MAINNET_TOKENS.USDC, MAINNET_TOKENS.DAI],
-    name: "USDC/DAI",
   },
 ];

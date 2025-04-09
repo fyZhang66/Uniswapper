@@ -1,11 +1,6 @@
 // src/hooks/useLiquidity.js
 import { useState, useEffect, useRef } from 'react';
-import { 
-  useReadContract, 
-  useWriteContract, 
-  useWaitForTransactionReceipt, 
-  useAccount 
-} from 'wagmi';
+import { useReadContract, useWriteContract, useAccount } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { 
   ROUTER_ABI, 
@@ -14,7 +9,6 @@ import {
   CONTRACTS 
 } from '../constants/contracts';
 import { useToken } from './useToken';
-import { TOKEN_DECIMALS } from '../constants/tokens';
 
 export function useLiquidity(tokenAAddress, tokenBAddress) {
   const [pairAddress, setPairAddress] = useState(null);
@@ -25,7 +19,6 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
   const [txHash, setTxHash] = useState('');
   const [error, setError] = useState(null);
   const [isAddingLiquidity, setIsAddingLiquidity] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   // Track if component is mounted
@@ -73,19 +66,11 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
   });
 
   // Handle write contracts
-  const { writeContractAsync: approve } = useWriteContract();
   const { writeContractAsync: addLiquidityTx } = useWriteContract();
 
-  // Wait for transaction confirmation - only for UI status updates
-  const { isLoading: isWaitingForTx } = useWaitForTransactionReceipt({
-    hash: txHash,
-    // No longer using the onSuccess callback - everything happens immediately after getting txHash
-  });
 
   // One-time initialization effect
   useEffect(() => {
-    console.log(!initialFetchDone.current && tokenAAddress && tokenBAddress, "fetch or not")
-    // When token addresses change or when component first mounts, fetch data once
     if (!initialFetchDone.current && tokenAAddress && tokenBAddress) {
       refetchPair();
       initialFetchDone.current = true;
@@ -98,7 +83,6 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
       setPairAddress(pairAddressData);
       setPairExists(pairAddressData !== '0x0000000000000000000000000000000000000000');
       
-      // Only fetch reserves and LP balance if pair exists
       if (pairAddressData !== '0x0000000000000000000000000000000000000000') {
         refetchReserves();
         if (address) {
@@ -124,12 +108,11 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
       const reserve0 = reservesData[0];
       const reserve1 = reservesData[1];
       
-      // Format reserves based on token order
       const reserveA = isTokenAToken0 ? reserve0 : reserve1;
       const reserveB = isTokenAToken0 ? reserve1 : reserve0;
       
       setReserves({
-        reserve0: formatUnits(reserve0, 18), // Reserve values are displayed with 18 decimals
+        reserve0: formatUnits(reserve0, 18),
         reserve1: formatUnits(reserve1, 18),
         reserveA: formatUnits(reserveA, tokenA.decimals || 18),
         reserveB: formatUnits(reserveB, tokenB.decimals || 18),
@@ -144,7 +127,7 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
   // Update LP token balance
   useEffect(() => {
     if (lpBalance) {
-      setLpTokenBalance(formatUnits(lpBalance, 18)); // LP tokens have 18 decimals
+      setLpTokenBalance(formatUnits(lpBalance, 18));
     } else {
       setLpTokenBalance(null);
     }
@@ -158,26 +141,24 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
       const { reserveABigInt, reserveBBigInt } = reserves;
       
       if (isCalculatingB) {
-        // Calculate token B amount based on token A input
         const amountABigInt = parseUnits(
           amount, 
-          tokenA.decimals || TOKEN_DECIMALS[tokenA.symbol] || 18
+          tokenA.decimals || 18
         );
         const amountBBigInt = (amountABigInt * reserveBBigInt) / reserveABigInt;
         return formatUnits(
           amountBBigInt, 
-          tokenB.decimals || TOKEN_DECIMALS[tokenB.symbol] || 18
+          tokenB.decimals || 18
         );
       } else {
-        // Calculate token A amount based on token B input
         const amountBBigInt = parseUnits(
           amount, 
-          tokenB.decimals || TOKEN_DECIMALS[tokenB.symbol] || 18
+          tokenB.decimals || 18
         );
         const amountABigInt = (amountBBigInt * reserveABigInt) / reserveBBigInt;
         return formatUnits(
           amountABigInt, 
-          tokenA.decimals || TOKEN_DECIMALS[tokenA.symbol] || 18
+          tokenA.decimals || 18
         );
       }
     } catch (err) {
@@ -197,10 +178,8 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
 
     try {
       // Parse input amounts
-      const amountA = parseUnits( amountAInput, tokenA.decimals || TOKEN_DECIMALS[tokenA.symbol] || 18 );
-      const amountB = parseUnits( amountBInput, tokenB.decimals || TOKEN_DECIMALS[tokenB.symbol] || 18 );
-
-      console.log(amountA, amountB, "00000000")
+      const amountA = parseUnits(amountAInput, tokenA.decimals || 18);
+      const amountB = parseUnits(amountBInput, tokenB.decimals || 18);
 
       // Calculate minimum amounts with slippage tolerance
       const minAmountA = (amountA * BigInt(Math.floor((100 - slippageTolerance) * 1000))) / BigInt(100000);
@@ -209,36 +188,17 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
       // Set deadline to 20 minutes from now
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 20);
 
-      // Check if token allowances are sufficient
-      const allowanceA = await tokenA.checkAllowance(address, CONTRACTS.ROUTER);
-      const allowanceB = await tokenB.checkAllowance(address, CONTRACTS.ROUTER);
+      // Approve token A
+      console.log(`Approving ${tokenA.symbol}...`);
+      const approveATx = await tokenA.approveSpender(CONTRACTS.ROUTER, amountAInput);
+      setTxHash(approveATx);
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait for approval
 
-      // Approve token A if needed
-      if (allowanceA < amountA) {
-        console.log(`Approving ${tokenA.symbol}...`);
-        const approveATx = await approve({
-          address: tokenAAddress,
-          abi: tokenA.abi || PAIR_ABI, // Use token ABI or fallback to PAIR_ABI
-          functionName: 'approve',
-          args: [CONTRACTS.ROUTER, amountA],
-        });
-        
-        setTxHash(approveATx);
-        await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait for approval
-      }
-
-      // Approve token B if needed
-      if (allowanceB < amountB) {
-        console.log(`Approving ${tokenB.symbol}...`);
-        const approveBTx = await approve({
-          address: tokenBAddress,
-          abi: tokenB.abi || PAIR_ABI, // Use token ABI or fallback to PAIR_ABI
-          functionName: 'approve',
-          args: [CONTRACTS.ROUTER, amountB],
-        });
-        
-        setTxHash(approveBTx);
-      }
+      // Approve token B
+      console.log(`Approving ${tokenB.symbol}...`);
+      const approveBTx = await tokenB.approveSpender(CONTRACTS.ROUTER, amountBInput);
+      setTxHash(approveBTx);
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait for approval
 
       // Add liquidity
       console.log('Adding liquidity...');
@@ -254,38 +214,26 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
           minAmountA,
           minAmountB,
           address,
-          deadline,
+          deadline
         ],
       });
-      console.log('Liquidity added:', addLiquidityTxHash);
+
       setTxHash(addLiquidityTxHash);
-      
-      // Update everything immediately without waiting for confirmation
-      setIsAddingLiquidity(false);
-      setIsLoading(false);
       setSuccess(true);
-      
-      // Refetch all data immediately
+
+      // Wait for transaction to be mined
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Update balances and reserves
       tokenA.refetchBalance();
       tokenB.refetchBalance();
-      refetchPair();
       refetchReserves();
       refetchLpBalance();
     } catch (err) {
-      console.error('Add liquidity error:', err);
+      console.error('Error adding liquidity:', err);
       setError(err.message || 'Failed to add liquidity');
+    } finally {
       setIsAddingLiquidity(false);
-    }
-  };
-
-  // Manual fetch function that can be exposed
-  const fetchAllData = () => {
-    if (tokenAAddress && tokenBAddress) {
-      refetchPair();
-      if (pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000') {
-        refetchReserves();
-        refetchLpBalance();
-      }
     }
   };
 
@@ -297,19 +245,16 @@ export function useLiquidity(tokenAAddress, tokenBAddress) {
   }, []);
 
   return {
+    pairAddress,
     pairExists,
     reserves,
+    isTokenAToken0,
     lpTokenBalance,
-    isAddingLiquidity: isAddingLiquidity || isWaitingForTx,
-    error,
     txHash,
-    addLiquidity,
-    calculateOptimalAmount,
-    refetchPair,
-    refetchReserves,
-    refetchLpBalance,
-    isLoading,
+    error,
+    isAddingLiquidity,
     success,
-    fetchAllData, // Expose manual fetch function
+    calculateOptimalAmount,
+    addLiquidity,
   };
 }

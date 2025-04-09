@@ -1,8 +1,7 @@
 // src/hooks/useToken.js
 import { useState, useEffect } from "react";
 import { useReadContract, useWriteContract, useAccount } from "wagmi";
-import { readContract } from 'wagmi/actions';
-import config from '../config/wagmiConfig';
+import { TOKEN_LIST } from '../constants/tokens';
 
 import { formatUnits, parseUnits } from "viem";
 import { ERC20_ABI } from "../constants/contracts";
@@ -16,29 +15,17 @@ export function useToken(tokenAddress) {
 
   const { address } = useAccount();
 
-  // Read token decimals
-  const { data: decimalsData } = useReadContract({
-    address: tokenAddress,
-    abi: ERC20_ABI,
-    functionName: "decimals",
-    enabled: !!tokenAddress,
-  });
-
-  // Read token symbol
-  const { data: symbolData } = useReadContract({
-    address: tokenAddress,
-    abi: ERC20_ABI,
-    functionName: "symbol",
-    enabled: !!tokenAddress,
-  });
-
-  // Read token name
-  const { data: nameData } = useReadContract({
-    address: tokenAddress,
-    abi: ERC20_ABI,
-    functionName: "name",
-    enabled: !!tokenAddress,
-  });
+  // Get token info from TOKEN_LIST
+  const tokenInfo = TOKEN_LIST.find(token => token.address.toLowerCase() === tokenAddress?.toLowerCase());
+  
+  // Set decimals from token info if available
+  useEffect(() => {
+    if (tokenInfo) {
+      setDecimals(tokenInfo.decimals);
+      setSymbol(tokenInfo.symbol);
+      setName(tokenInfo.name);
+    }
+  }, [tokenInfo]);
 
   // Read token balance
   const { data: balanceData, refetch: refetchBalance } = useReadContract({
@@ -50,30 +37,8 @@ export function useToken(tokenAddress) {
     enabled: !!tokenAddress && !!address,
   });
 
-  // Check token allowance
-  const checkAllowance = async (ownerAddress, spenderAddress) => {
-    if (!tokenAddress || !ownerAddress || !spenderAddress) return BigInt(0);
-  
-    try {
-      // For wagmi v2, readContract returns the data directly
-      const allowance = await readContract(config, {
-        address: tokenAddress,
-        abi: ERC20_ABI,
-        functionName: "allowance",
-        watch: false,
-        args: [ownerAddress, spenderAddress],
-      });
-      
-      return allowance || BigInt(0);
-    } catch (error) {
-      console.error("Error checking allowance:", error);
-      return BigInt(0);
-    }
-  };
-
   // Approve token
-  const { writeContract: approveToken, isPending: isApproving } =
-    useWriteContract();
+  const { writeContractAsync: approveToken, isPending: isApproving } = useWriteContract();
     
   const approveSpender = async (spenderAddress, amount) => {
     if (!tokenAddress || !spenderAddress) return;
@@ -88,44 +53,11 @@ export function useToken(tokenAddress) {
   };
 
   useEffect(() => {
-    if (decimalsData !== undefined) {
-      setDecimals(Number(decimalsData));
-    }
-  }, [decimalsData]);
-
-  useEffect(() => {
-    if (symbolData) {
-      setSymbol(symbolData);
-    }
-  }, [symbolData]);
-
-  useEffect(() => {
-    if (nameData) {
-      setName(nameData);
-    }
-  }, [nameData]);
-
-  useEffect(() => {
     if (balanceData) {
       setBalance(balanceData);
       setFormattedBalance(formatUnits(balanceData, decimals));
     }
   }, [balanceData, decimals]);
-
-  // Refresh balance on address or token change, and every 15 seconds
-  // useEffect(() => {
-  //   if (tokenAddress && address) {
-  //     // Initial fetch
-  //     refetchBalance();
-      
-  //     // Set up periodic refresh
-  //     const intervalId = setInterval(() => {
-  //       refetchBalance();
-  //     }, 15000); // 15 seconds
-      
-  //     return () => clearInterval(intervalId);
-  //   }
-  // }, [tokenAddress, address, refetchBalance]);
 
   return {
     balance,
@@ -133,7 +65,6 @@ export function useToken(tokenAddress) {
     decimals,
     symbol,
     name,
-    checkAllowance,
     approveSpender,
     isApproving,
     refetchBalance,
