@@ -88,10 +88,12 @@ const AMMSimulation = ({
       
       <div className="mb-6">
         <AMMCurve 
-          reserveA={simulated.reserveA}
-          reserveB={simulated.reserveB}
+          reserveA={reserveA}
+          reserveB={reserveB}
           tokenASymbol={tokenASymbol}
           tokenBSymbol={tokenBSymbol}
+          simulatedReserveA={simulated.reserveA}
+          simulatedReserveB={simulated.reserveB}
         />
       </div>
       

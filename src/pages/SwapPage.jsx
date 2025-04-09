@@ -47,7 +47,6 @@ export default function SwapPage() {
     setTokenInAddress(tokenOutAddress);
     setTokenOutAddress(tempToken);
     
-    const tempAmount = amountIn;
     setAmountIn(amountOut);
     setAmountOut(estimatedOutput || '');
   };
@@ -93,7 +92,7 @@ export default function SwapPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* First column - Swap Form */}
         <div className="flex justify-center">
-          <div className="w-full max-w-md bg-gray-800 rounded-xl shadow-xl overflow-hidden p-6 border border-gray-700">
+          <div className="w-full max-w-md bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700">
             <h2 className="text-xl font-semibold mb-4 text-center">Swap Tokens</h2>
             
             {!isConnected ? (
