@@ -92,7 +92,7 @@ const SwapSimulation = ({
       </div>
       
       <div className="text-center text-xs text-gray-400 mb-2">
-        Constant Product (k): {(parseFloat(reserveA) * parseFloat(reserveB)).toFixed(2)}
+        Constant Product (k): {(parseFloat(reserveA) * parseFloat(reserveB)).toLocaleString(undefined, {maximumFractionDigits: 4})}
       </div>
       
       <div className="mb-6">
@@ -231,7 +231,7 @@ export default function SwapPage() {
                   <div className="flex justify-between mb-2">
                     <label className="text-gray-400">You Send</label>
                     <span className="text-gray-400 text-sm">
-                      Balance: {tokenIn.formattedBalance || '0'} {tokenIn.symbol}
+                      Balance: {parseFloat(tokenIn.formattedBalance || '0').toFixed(4)} {tokenIn.symbol}
                     </span>
                   </div>
                   
@@ -280,7 +280,7 @@ export default function SwapPage() {
                   <div className="flex justify-between mb-2">
                     <label className="text-gray-400">You Receive</label>
                     <span className="text-gray-400 text-sm">
-                      Balance: {tokenOut.formattedBalance || '0'} {tokenOut.symbol}
+                      Balance: {parseFloat(tokenOut.formattedBalance || '0').toFixed(4)} {tokenOut.symbol}
                     </span>
                   </div>
                   
@@ -307,7 +307,7 @@ export default function SwapPage() {
                       <div className="flex justify-between">
                         <span>Exchange Rate:</span>
                         <span>
-                          1 {tokenIn.symbol} ≈ {Number(amountOut) / Number(amountIn)} {tokenOut.symbol}
+                          1 {tokenIn.symbol} ≈ {(Number(amountOut) / Number(amountIn)).toFixed(4)} {tokenOut.symbol}
                         </span>
                       </div>
                       <div className="flex justify-between mt-1">

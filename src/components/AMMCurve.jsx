@@ -1,16 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-const AMMCurve = ({ 
-  reserveA, 
-  reserveB, 
-  tokenASymbol, 
-  tokenBSymbol, 
-  scale = 1.5, 
-  simulatedReserveA, 
-  simulatedReserveB,
-  expectedPointA,
-  expectedPointB 
-}) => {
+const AMMCurve = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, scale = 1.5, simulatedReserveA, simulatedReserveB, expectedPointA, expectedPointB }) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });

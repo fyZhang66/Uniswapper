@@ -2,13 +2,7 @@ import React from 'react';
 import AMMCurve from './AMMCurve';
 
 // Shared component for displaying AMM information used by both Swap and Liquidity pages
-export const AMMCurveWithInfo = ({ 
-  reserveA, 
-  reserveB, 
-  tokenASymbol, 
-  tokenBSymbol,
-  title = "AMM Constant Product Curve"
-}) => {
+export const AMMCurveWithInfo = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, title = "AMM Constant Product Curve" }) => {
   const k = parseFloat(reserveA) * parseFloat(reserveB);
   
   return (
@@ -23,7 +17,7 @@ export const AMMCurveWithInfo = ({
         </div>
         <div className="text-blue-400">
           <div>Constant Product (k)</div>
-          <div>{k.toFixed(2)}</div>
+          <div>{k.toLocaleString(undefined, {maximumFractionDigits: 4})}</div>
         </div>
       </div>
       
@@ -44,7 +38,7 @@ export const AMMCurveWithInfo = ({
         <ul className="list-disc ml-5 mt-2 space-y-1">
           <li><span className="text-blue-300">{tokenASymbol}</span> reserves: {parseFloat(reserveA).toFixed(4)}</li>
           <li><span className="text-blue-300">{tokenBSymbol}</span> reserves: {parseFloat(reserveB).toFixed(4)}</li>
-          <li><span className="text-blue-300">k</span> (constant product): {k.toFixed(2)}</li>
+          <li><span className="text-blue-300">k</span> (constant product): {k.toLocaleString(undefined, {maximumFractionDigits: 4})}</li>
         </ul>
         <p className="mt-2">
           When swapping tokens, you move along this curve. When adding or removing liquidity, the entire curve shifts.

@@ -7,7 +7,6 @@ import FirstLiquidityInfo from '../components/FirstLiquidityInfo';
 import { MAINNET_TOKENS } from '../constants/tokens';
 import { useToken } from '../hooks/useToken';
 import { useLiquidity } from '../hooks/useLiquidity';
-import AMMCurve from '../components/AMMCurve';
 import AMMSimulation from '../components/AMMSimulation';
 import { LiquidityAMMInfo } from '../components/AMMInfoPanel';
 
@@ -147,7 +146,7 @@ export default function LiquidityPage() {
                       <div className="flex justify-between mb-2">
                         <label className="text-gray-400">First Token</label>
                         <span className="text-gray-400 text-sm">
-                          Balance: {tokenA.formattedBalance || '0'} {tokenA.symbol}
+                          Balance: {parseFloat(tokenA.formattedBalance || '0').toFixed(4)} {tokenA.symbol}
                         </span>
                       </div>
                       
@@ -196,7 +195,7 @@ export default function LiquidityPage() {
                       <div className="flex justify-between mb-2">
                         <label className="text-gray-400">Second Token</label>
                         <span className="text-gray-400 text-sm">
-                          Balance: {tokenB.formattedBalance || '0'} {tokenB.symbol}
+                          Balance: {parseFloat(tokenB.formattedBalance || '0').toFixed(4)} {tokenB.symbol}
                         </span>
                       </div>
                       
@@ -251,7 +250,7 @@ export default function LiquidityPage() {
                       <div className="flex justify-between mb-2">
                         <label className="text-gray-400">LP Tokens to Remove</label>
                         <span className="text-gray-400 text-sm">
-                          Balance: {lpTokenBalance}
+                          Balance: {parseFloat(lpTokenBalance || '0').toFixed(4)}
                         </span>
                       </div>
                       
@@ -288,13 +287,13 @@ export default function LiquidityPage() {
                             <div className="flex justify-between">
                               <span>{tokenA.symbol}:</span>
                               <span className="font-medium">
-                                {(parseFloat(reserves.reserveA) * (parseFloat(lpAmount) / parseFloat(lpTokenBalance))).toFixed(6)}
+                                {(parseFloat(reserves.reserveA) * (parseFloat(lpAmount) / parseFloat(lpTokenBalance))).toFixed(4)}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span>{tokenB.symbol}:</span>
                               <span className="font-medium">
-                                {(parseFloat(reserves.reserveB) * (parseFloat(lpAmount) / parseFloat(lpTokenBalance))).toFixed(6)}
+                                {(parseFloat(reserves.reserveB) * (parseFloat(lpAmount) / parseFloat(lpTokenBalance))).toFixed(4)}
                               </span>
                             </div>
                           </div>
@@ -323,16 +322,16 @@ export default function LiquidityPage() {
                       <div className="mt-1 space-y-1">
                         <div className="flex justify-between">
                           <span>{tokenA.symbol} Reserves:</span>
-                          <span className="font-medium">{reserves.reserveA || '0'}</span>
+                          <span className="font-medium">{parseFloat(reserves.reserveA || '0').toFixed(4)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>{tokenB.symbol} Reserves:</span>
-                          <span className="font-medium">{reserves.reserveB || '0'}</span>
+                          <span className="font-medium">{parseFloat(reserves.reserveB || '0').toFixed(4)}</span>
                         </div>
                         {lpTokenBalance && (
                           <div className="flex justify-between">
                             <span>Your LP Tokens:</span>
-                            <span className="font-medium">{lpTokenBalance}</span>
+                            <span className="font-medium">{parseFloat(lpTokenBalance).toFixed(4)}</span>
                           </div>
                         )}
                       </div>
