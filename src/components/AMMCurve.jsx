@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 
-const AMMCurve = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, scale = 1.5, simulatedReserveA, simulatedReserveB }) => {
+const AMMCurve = ({ 
+  reserveA, 
+  reserveB, 
+  tokenASymbol, 
+  tokenBSymbol, 
+  scale = 1.5, 
+  simulatedReserveA, 
+  simulatedReserveB,
+  expectedPointA,
+  expectedPointB 
+}) => {
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [hoveredPoint, setHoveredPoint] = useState(null);
   
@@ -16,8 +27,8 @@ const AMMCurve = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, scale = 1.5,
       }
     });
     
-    if (canvasRef.current) {
-      resizeObserver.observe(canvasRef.current.parentElement);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
     }
     
     return () => resizeObserver.disconnect();
@@ -25,10 +36,12 @@ const AMMCurve = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, scale = 1.5,
   
   // Render the curve
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !reserveA || !reserveB) return;
+    if (!canvasRef.current || !reserveA || !reserveB || dimensions.width === 0) return;
     
+    const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
     const { width, height } = dimensions;
     
     // Set canvas dimensions
@@ -49,9 +62,23 @@ const AMMCurve = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, scale = 1.5,
     const simulatedReserveBNum = hasSimulation ? parseFloat(simulatedReserveB) : 0;
     const simulatedK = hasSimulation ? simulatedReserveANum * simulatedReserveBNum : 0;
     
+    // Check for expected point (for swaps)
+    const hasExpectedPoint = expectedPointA && expectedPointB;
+    const expectedPointANum = hasExpectedPoint ? parseFloat(expectedPointA) : 0;
+    const expectedPointBNum = hasExpectedPoint ? parseFloat(expectedPointB) : 0;
+    
     // Determine range for the curve (extend beyond current point)
-    const maxReserveA = Math.max(reserveANum, simulatedReserveANum || 0) * scale;
-    const maxReserveB = Math.max(reserveBNum, simulatedReserveBNum || 0) * scale;
+    const maxReserveA = Math.max(
+      reserveANum, 
+      simulatedReserveANum || 0,
+      expectedPointANum || 0
+    ) * scale;
+    
+    const maxReserveB = Math.max(
+      reserveBNum, 
+      simulatedReserveBNum || 0,
+      expectedPointBNum || 0
+    ) * scale;
     
     // Set up coordinate system transformation
     const padding = 40;
@@ -171,6 +198,23 @@ const AMMCurve = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, scale = 1.5,
     ctx.textAlign = 'center';
     ctx.fillText('P', currentX, currentY - 10);
     
+    // Draw dotted lines to axes for the current position
+    ctx.beginPath();
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    
+    // Vertical line to x-axis
+    ctx.moveTo(currentX, currentY);
+    ctx.lineTo(currentX, height - padding);
+    
+    // Horizontal line to y-axis
+    ctx.moveTo(currentX, currentY);
+    ctx.lineTo(padding, currentY);
+    
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
     // Draw simulated position if values provided
     if (hasSimulation) {
       const simulatedX = toCanvasX(simulatedReserveANum);
@@ -199,22 +243,33 @@ const AMMCurve = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, scale = 1.5,
       ctx.setLineDash([]);
     }
     
-    // Draw dotted lines to axes for the current position
-    ctx.beginPath();
-    ctx.setLineDash([3, 3]);
-    ctx.strokeStyle = '#666';
-    ctx.lineWidth = 1;
-    
-    // Vertical line to x-axis
-    ctx.moveTo(currentX, currentY);
-    ctx.lineTo(currentX, height - padding);
-    
-    // Horizontal line to y-axis
-    ctx.moveTo(currentX, currentY);
-    ctx.lineTo(padding, currentY);
-    
-    ctx.stroke();
-    ctx.setLineDash([]);
+    // Draw expected point (for swaps) if values provided
+    if (hasExpectedPoint) {
+      const expectedX = toCanvasX(expectedPointANum);
+      const expectedY = toCanvasY(expectedPointBNum);
+      
+      ctx.beginPath();
+      ctx.arc(expectedX, expectedY, 6, 0, 2 * Math.PI);
+      ctx.fillStyle = '#FFCD1E'; // Golden yellow
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      // Draw a label for the expected position
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText('E', expectedX, expectedY - 10);
+      
+      // Draw dotted lines between current and expected position
+      ctx.beginPath();
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = '#FFCD1E';
+      ctx.lineWidth = 1;
+      ctx.moveTo(currentX, currentY);
+      ctx.lineTo(expectedX, expectedY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     
     // Add hover detection
     const handleMouseMove = (e) => {
@@ -238,26 +293,50 @@ const AMMCurve = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, scale = 1.5,
         );
       }
       
+      // Check distance to expected point if it exists
+      let distanceToExpectedPoint = Infinity;
+      if (hasExpectedPoint) {
+        const expectedX = toCanvasX(expectedPointANum);
+        const expectedY = toCanvasY(expectedPointBNum);
+        
+        distanceToExpectedPoint = Math.sqrt(
+          Math.pow(mouseX - expectedX, 2) + Math.pow(mouseY - expectedY, 2)
+        );
+      }
+      
       // Determine which point is being hovered (if any)
-      if (distanceToCurrentPoint < 20 && distanceToCurrentPoint <= distanceToSimulatedPoint) {
+      if (distanceToCurrentPoint < 20 && 
+          distanceToCurrentPoint <= distanceToSimulatedPoint && 
+          distanceToCurrentPoint <= distanceToExpectedPoint) {
         setHoveredPoint({
           x: currentX,
           y: currentY,
           reserveA: reserveANum.toFixed(4),
           reserveB: reserveBNum.toFixed(4),
-          isSimulated: false
+          isSimulated: false,
+          isExpected: false
         });
         canvas.style.cursor = 'pointer';
-      } else if (hasSimulation && distanceToSimulatedPoint < 20) {
-        const simulatedX = toCanvasX(simulatedReserveANum);
-        const simulatedY = toCanvasY(simulatedReserveBNum);
-        
+      } else if (hasSimulation && 
+                distanceToSimulatedPoint < 20 && 
+                distanceToSimulatedPoint <= distanceToExpectedPoint) {
         setHoveredPoint({
-          x: simulatedX,
-          y: simulatedY,
+          x: toCanvasX(simulatedReserveANum),
+          y: toCanvasY(simulatedReserveBNum),
           reserveA: simulatedReserveANum.toFixed(4),
           reserveB: simulatedReserveBNum.toFixed(4),
-          isSimulated: true
+          isSimulated: true,
+          isExpected: false
+        });
+        canvas.style.cursor = 'pointer';
+      } else if (hasExpectedPoint && distanceToExpectedPoint < 20) {
+        setHoveredPoint({
+          x: toCanvasX(expectedPointANum),
+          y: toCanvasY(expectedPointBNum),
+          reserveA: expectedPointANum.toFixed(4),
+          reserveB: expectedPointBNum.toFixed(4),
+          isSimulated: false,
+          isExpected: true
         });
         canvas.style.cursor = 'pointer';
       } else {
@@ -266,64 +345,60 @@ const AMMCurve = ({ reserveA, reserveB, tokenASymbol, tokenBSymbol, scale = 1.5,
       }
     };
     
+    const handleMouseLeave = () => {
+      setHoveredPoint(null);
+      canvas.style.cursor = 'default';
+    };
+    
     canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseleave', handleMouseLeave);
     
     return () => {
       canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [dimensions, reserveA, reserveB, tokenASymbol, tokenBSymbol, scale, simulatedReserveA, simulatedReserveB]);
+  }, [dimensions, reserveA, reserveB, simulatedReserveA, simulatedReserveB, expectedPointA, expectedPointB, tokenASymbol, tokenBSymbol, scale]);
+  
+  // Render tooltip for hovered point
+  const renderTooltip = () => {
+    if (!hoveredPoint) return null;
+    
+    const { reserveA, reserveB, isSimulated, isExpected } = hoveredPoint;
+    
+    return (
+      <div 
+        className="absolute bg-gray-800 border border-gray-600 rounded-md p-2 z-10 shadow-lg text-sm"
+        style={{
+          left: `${hoveredPoint.x + 10}px`,
+          top: `${hoveredPoint.y - 10}px`,
+          transform: 'translate(-50%, -100%)'
+        }}
+      >
+        <div className="font-medium mb-1">
+          {isSimulated ? 'Simulated Position' : isExpected ? 'Expected Position' : 'Current Position'}
+        </div>
+        <div className="space-y-1">
+          <div>
+            <span className="text-gray-400">{tokenASymbol}:</span> {reserveA}
+          </div>
+          <div>
+            <span className="text-gray-400">{tokenBSymbol}:</span> {reserveB}
+          </div>
+        </div>
+      </div>
+    );
+  };
   
   return (
     <div className="relative">
-      <h3 className="text-xl font-medium mb-2">AMM Constant Product Curve</h3>
-      <p className="text-gray-400 text-sm mb-4">
-        x * y = k, where k = {parseFloat(reserveA) * parseFloat(reserveB)}
-        {simulatedReserveA && simulatedReserveB && (
-          <span>
-            {' '}→ k' = {parseFloat(simulatedReserveA) * parseFloat(simulatedReserveB)}
-          </span>
-        )}
-      </p>
-      
-      {simulatedReserveA && simulatedReserveB && (
-        <div className="mb-4 flex items-center text-xs text-gray-400">
-          <div className="flex items-center mr-4">
-            <div className="w-3 h-3 bg-blue-500 rounded-full mr-1"></div>
-            <span>Current Pool</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-green-500 rounded-full mr-1"></div>
-            <span>Simulated Pool</span>
-          </div>
-        </div>
-      )}
-      
-      <div className="w-full bg-gray-800 rounded-lg p-4">
+      <div ref={containerRef} className="w-full">
         <canvas 
           ref={canvasRef}
-          style={{ width: '100%', height: `${dimensions.height}px` }}
+          className="w-full"
+          style={{ height: dimensions.height ? `${dimensions.height}px` : 'auto' }}
         />
-        
-        {hoveredPoint && (
-          <div 
-            className={`absolute bg-gray-700 p-2 rounded shadow-lg text-sm ${hoveredPoint.isSimulated ? 'border border-green-500' : ''}`}
-            style={{ 
-              left: hoveredPoint.x + 10, 
-              top: hoveredPoint.y - 10,
-              transform: 'translateY(-100%)',
-              zIndex: 10 
-            }}
-          >
-            <p>{hoveredPoint.isSimulated ? 'Simulated Position:' : 'Current Position:'}</p>
-            <p>{tokenASymbol || 'Token A'}: {hoveredPoint.reserveA}</p>
-            <p>{tokenBSymbol || 'Token B'}: {hoveredPoint.reserveB}</p>
-          </div>
-        )}
       </div>
-      <div className="mt-4 text-sm text-gray-400">
-        <p>• On every swap, point P moves along the curve.</p>
-        <p>• On liquidity addition/removal, the curve shifts up/down.</p>
-      </div>
+      {hoveredPoint && renderTooltip()}
     </div>
   );
 };

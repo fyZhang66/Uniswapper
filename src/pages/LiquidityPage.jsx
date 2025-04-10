@@ -9,13 +9,14 @@ import { useToken } from '../hooks/useToken';
 import { useLiquidity } from '../hooks/useLiquidity';
 import AMMCurve from '../components/AMMCurve';
 import AMMSimulation from '../components/AMMSimulation';
+import { LiquidityAMMInfo } from '../components/AMMInfoPanel';
 
 export default function LiquidityPage() {
   const { isConnected } = useAccount();
   
   // Default tokens
-  const [tokenAAddress, setTokenAAddress] = useState(MAINNET_TOKENS.WETH);
-  const [tokenBAddress, setTokenBAddress] = useState(MAINNET_TOKENS.USDC);
+  const [tokenAAddress, setTokenAAddress] = useState(MAINNET_TOKENS.DAI);
+  const [tokenBAddress, setTokenBAddress] = useState(MAINNET_TOKENS.UNI);
   
   // Tab control
   const [activeTab, setActiveTab] = useState('add'); // 'add' or 'remove'
@@ -396,7 +397,7 @@ export default function LiquidityPage() {
                     isRemoving={false}
                   />
                 ) : (
-                  <AMMCurve 
+                  <LiquidityAMMInfo 
                     reserveA={reserves.reserveA}
                     reserveB={reserves.reserveB}
                     tokenASymbol={tokenA.symbol}

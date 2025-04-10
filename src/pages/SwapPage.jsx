@@ -6,13 +6,135 @@ import { MAINNET_TOKENS } from '../constants/tokens';
 import { useToken } from '../hooks/useToken';
 import { useSwap } from '../hooks/useSwap';
 import AMMCurve from '../components/AMMCurve';
+import { SwapAMMInfo } from '../components/AMMInfoPanel';
+
+// Create a SwapSimulation component that extends AMMCurve
+const SwapSimulation = ({ 
+  reserveA, 
+  reserveB, 
+  tokenASymbol, 
+  tokenBSymbol,
+  amountIn,
+  amountOut,
+  tokenInIsTokenA,
+  priceImpact
+}) => {
+  // Calculate expected point after swap
+  const [expectedPoint, setExpectedPoint] = useState({
+    reserveA: reserveA,
+    reserveB: reserveB
+  });
+
+  useEffect(() => {
+    // Reset to actual reserves when they change
+    setExpectedPoint({
+      reserveA: reserveA,
+      reserveB: reserveB
+    });
+  }, [reserveA, reserveB]);
+
+  // Calculate new point position after swap
+  useEffect(() => {
+    if (!reserveA || !reserveB || !amountIn || !amountOut) return;
+    
+    const currentReserveA = parseFloat(reserveA);
+    const currentReserveB = parseFloat(reserveB);
+    const swapAmountIn = parseFloat(amountIn);
+    
+    // Instead of using the estimated output, we'll calculate the exact output that 
+    // maintains the constant product formula x*y=k
+    const k = currentReserveA * currentReserveB;
+    
+    if (tokenInIsTokenA) {
+      // For tokenA → tokenB swap
+      // New reserveA = currentReserveA - amountIn
+      const newReserveA = currentReserveA - swapAmountIn;
+      
+      // Calculate newReserveB to maintain the constant product formula
+      // newReserveA * newReserveB = k
+      const newReserveB = k / newReserveA;
+      
+      setExpectedPoint({
+        reserveA: newReserveA.toString(),
+        reserveB: newReserveB.toString()
+      });
+    } else {
+      // For tokenB → tokenA swap
+      // New reserveB = currentReserveB - amountIn
+      const newReserveB = currentReserveB - swapAmountIn;
+      
+      // Calculate newReserveA to maintain the constant product formula
+      // newReserveA * newReserveB = k
+      const newReserveA = k / newReserveB;
+      
+      setExpectedPoint({
+        reserveA: newReserveA.toString(),
+        reserveB: newReserveB.toString()
+      });
+    }
+  }, [reserveA, reserveB, amountIn, amountOut, tokenInIsTokenA]);
+
+  return (
+    <div>
+      <h3 className="text-xl font-medium mb-2">Swap Simulation</h3>
+      
+      <div className="flex justify-between text-sm mb-4">
+        <div className="text-blue-400">
+          <div>Current Position</div>
+          <div>{parseFloat(reserveA).toFixed(4)} {tokenASymbol}</div>
+          <div>{parseFloat(reserveB).toFixed(4)} {tokenBSymbol}</div>
+        </div>
+        <div className="text-emerald-400">
+          <div>Expected Position</div>
+          <div>{parseFloat(expectedPoint.reserveA).toFixed(4)} {tokenASymbol}</div>
+          <div>{parseFloat(expectedPoint.reserveB).toFixed(4)} {tokenBSymbol}</div>
+        </div>
+      </div>
+      
+      <div className="text-center text-xs text-gray-400 mb-2">
+        Constant Product (k): {(parseFloat(reserveA) * parseFloat(reserveB)).toFixed(2)}
+      </div>
+      
+      <div className="mb-6">
+        <AMMCurve 
+          reserveA={reserveA}
+          reserveB={reserveB}
+          tokenASymbol={tokenASymbol}
+          tokenBSymbol={tokenBSymbol}
+          expectedPointA={expectedPoint.reserveA}
+          expectedPointB={expectedPoint.reserveB}
+        />
+      </div>
+      
+      <div className="bg-gray-700/40 rounded-lg p-4 text-sm text-gray-300">
+        <h4 className="font-medium mb-2">What's happening:</h4>
+        <p>
+          When you swap {parseFloat(amountIn).toFixed(4)} {tokenASymbol} for
+          approximately {parseFloat(amountOut).toFixed(4)} {tokenBSymbol},
+          you move along the same constant product curve (x·y=k).
+        </p>
+        <div className="mt-2 flex justify-between items-center">
+          <span>Price Impact:</span>
+          <span className={`font-medium ${priceImpact > 3 ? 'text-yellow-400' : priceImpact > 1 ? 'text-yellow-300' : 'text-green-400'}`}>
+            {priceImpact.toFixed(2)}%
+          </span>
+        </div>
+        {priceImpact > 3 && (
+          <p className="mt-1 text-yellow-400">
+            This is a relatively high price impact, which means your trade significantly affects the price.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function SwapPage() {
   const { isConnected } = useAccount();
   
   // Default tokens
-  const [tokenInAddress, setTokenInAddress] = useState(MAINNET_TOKENS.WETH);
-  const [tokenOutAddress, setTokenOutAddress] = useState(MAINNET_TOKENS.USDC);
+  const [tokenInAddress, setTokenInAddress] = useState(MAINNET_TOKENS.DAI);
+  const [tokenOutAddress, setTokenOutAddress] = useState(MAINNET_TOKENS.UNI);
   
   // Amount inputs
   const [amountIn, setAmountIn] = useState('');
@@ -249,57 +371,49 @@ export default function SwapPage() {
                     !amountIn || 
                     !amountOut || 
                     Number(amountIn) <= 0 || 
-                    !pairExists ||
-                    Number(amountIn) > Number(tokenIn.formattedBalance)
+                    Number(amountOut) <= 0 || 
+                    !pairExists
                   }
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {isSwapping 
-                    ? 'Swapping...' 
-                    : !pairExists 
-                      ? 'No Liquidity Available' 
-                      : Number(amountIn) > Number(tokenIn.formattedBalance)
-                        ? 'Insufficient Balance'
-                        : 'Swap'}
+                  {isSwapping ? 'Swapping...' : 'Swap'}
                 </button>
               </div>
             )}
           </div>
         </div>
         
-        {/* Second column - AMM Curve */}
+        {/* Second column - AMM Curve/Simulation */}
         <div className="flex justify-center">
           <div className="w-full bg-gray-800 rounded-xl shadow-xl overflow-hidden p-6 border border-gray-700">
             {pairExists && reserves ? (
-              <AMMCurve 
-                reserveA={reserves.reserveIn}
-                reserveB={reserves.reserveOut}
-                tokenASymbol={tokenIn.symbol}
-                tokenBSymbol={tokenOut.symbol}
-              />
+              amountIn && amountOut && Number(amountIn) > 0 && Number(amountOut) > 0 ? (
+                <SwapSimulation
+                  reserveA={reserves.reserve0}
+                  reserveB={reserves.reserve1}
+                  tokenASymbol={tokenIn.symbol === tokenOut.symbol ? 'Token A' : tokenIn.symbol}
+                  tokenBSymbol={tokenIn.symbol === tokenOut.symbol ? 'Token B' : tokenOut.symbol}
+                  amountIn={amountIn}
+                  amountOut={amountOut}
+                  tokenInIsTokenA={true}
+                  priceImpact={priceImpact || 0}
+                />
+              ) : (
+                <SwapAMMInfo 
+                  reserveA={reserves.reserve0}
+                  reserveB={reserves.reserve1}
+                  tokenASymbol={tokenIn.symbol === tokenOut.symbol ? 'Token A' : tokenIn.symbol}
+                  tokenBSymbol={tokenIn.symbol === tokenOut.symbol ? 'Token B' : tokenOut.symbol}
+                />
+              )
             ) : (
               <div className="text-center py-12">
                 <h3 className="text-xl font-medium mb-2">AMM Constant Product Curve</h3>
                 <p className="text-gray-400">
                   {!pairExists 
-                    ? "No liquidity pool exists for this token pair yet. Liquidity must be added first."
+                    ? "No liquidity pool exists for this token pair yet. Add liquidity to create it!"
                     : "Loading pool data..."}
                 </p>
-              </div>
-            )}
-            
-            {pairExists && reserves && (
-              <div className="mt-6 bg-gray-700/40 rounded-lg p-4">
-                <h4 className="text-lg font-medium mb-2">Swap Simulation</h4>
-                <p className="text-gray-400 text-sm">
-                  When you swap {tokenIn.symbol} for {tokenOut.symbol}, the point P moves along the curve, 
-                  resulting in a price impact of {priceImpact ? `${priceImpact.toFixed(2)}%` : '0%'}.
-                </p>
-                {priceImpact && priceImpact > 5 && (
-                  <p className="text-red-400 text-sm mt-2">
-                    Warning: High price impact! Consider reducing your trade size.
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -307,7 +421,7 @@ export default function SwapPage() {
       </div>
       
       <div className="mt-8 text-center text-sm text-gray-500">
-        <p>Note: Swapping tokens will require approving the router to spend your tokens first.</p>
+        <p>Note: Swapping tokens will require two transactions: one to approve spending your tokens and one to execute the swap.</p>
       </div>
     </div>
   );
