@@ -8,6 +8,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 // Import pages
 import SwapPage from './pages/SwapPage';
 import LiquidityPage from './pages/LiquidityPage';
+import HistoryPage from './pages/HistoryPage';
 
 // Import components (to be created)
 import Header from './components/Header';
@@ -29,8 +30,12 @@ function App() {
             <main className="container mx-auto px-4 py-8 flex-grow">
               {activeTab === 'swap' ? (
                 <SwapPage />
-              ) : (
+              ) : activeTab === 'liquidity' ? (
                 <LiquidityPage />
+              ) : activeTab === 'history' ? (
+                <HistoryPage />
+              ) : (
+                <SwapPage />
               )}
             </main>
             

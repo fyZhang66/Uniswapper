@@ -45,6 +45,19 @@ const Header = ({ activeTab, setActiveTab }) => {
               </button>
             )}
             
+            {FEATURES.ENABLE_HISTORY && (
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  activeTab === 'history' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                History
+              </button>
+            )}
+            
             {FEATURES.ENABLE_STAKING && (
               <button
                 onClick={() => setActiveTab('staking')}
@@ -71,6 +84,9 @@ const Header = ({ activeTab, setActiveTab }) => {
               )}
               {FEATURES.ENABLE_LIQUIDITY && (
                 <option value="liquidity">Liquidity</option>
+              )}
+              {FEATURES.ENABLE_HISTORY && (
+                <option value="history">History</option>
               )}
               {FEATURES.ENABLE_STAKING && (
                 <option value="staking">Staking</option>
