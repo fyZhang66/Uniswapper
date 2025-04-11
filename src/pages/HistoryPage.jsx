@@ -388,7 +388,7 @@ export default function HistoryPage() {
           {pairExists && swapEvents.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Histogram */}
-              <div className="bg-gray-800 rounded-xl shadow-xl overflow-hidden p-6 border border-gray-700">
+              <div className="bg-gray-800 rounded-xl shadow-xl  p-6 border border-gray-700">
                 <h2 className="text-xl font-semibold mb-4">Price Distribution</h2>
                 
                 {priceStats && (
@@ -424,41 +424,41 @@ export default function HistoryPage() {
                 <h2 className="text-xl font-semibold mb-4">Recent Swaps</h2>
                 
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-700">
-                    <thead>
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Transaction</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Direction</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Amount</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Price ({tokenB.symbol}/{tokenA.symbol})</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-700">
-                      {swapEvents.slice(0, 10).map((swap, index) => (
-                        <tr key={`${swap.transactionHash}-${swap.logIndex}`} className={index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-750'}>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            <a 
-                              href={`https://etherscan.io/tx/${swap.transactionHash}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-400 hover:text-blue-300"
-                            >
-                              {`${swap.transactionHash.substring(0, 6)}...${swap.transactionHash.substring(62)}`}
-                            </a>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">{swap.tradeDirection}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">{swap.details}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">{swap.price.toFixed(6)}</td>
+                  <div className="max-h-[400px] overflow-y-auto">
+                    <table className="min-w-full divide-y divide-gray-700">
+                      <thead className="sticky top-0 bg-gray-800 z-10">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Transaction</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Direction</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Amount</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Price ({tokenB.symbol}/{tokenA.symbol})</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-700">
+                        {[...swapEvents].reverse().map((swap, index) => (
+                          <tr key={`${swap.transactionHash}-${swap.logIndex}`} className={index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-750'}>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm">
+                              <a 
+                                href={`https://etherscan.io/tx/${swap.transactionHash}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:text-blue-300"
+                              >
+                                {`${swap.transactionHash.substring(0, 6)}...${swap.transactionHash.substring(62)}`}
+                              </a>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm">{swap.tradeDirection}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm">{swap.details}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">{swap.price.toFixed(6)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                   
-                  {swapEvents.length > 10 && (
-                    <div className="mt-4 text-center text-sm text-gray-400">
-                      Showing 10 of {swapEvents.length} swaps
-                    </div>
-                  )}
+                  <div className="mt-4 text-center text-sm text-gray-400">
+                    Showing all {swapEvents.length} swaps
+                  </div>
                 </div>
               </div>
             </div>
