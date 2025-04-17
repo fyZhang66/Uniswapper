@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { API_HOST } from "../constants/config"; 
 import { MAINNET_TOKENS } from "../constants/tokens";
 import { useWriteContract, useAccount } from "wagmi";
 import { executeSwap } from "../utils/swapUtils";
@@ -12,7 +13,7 @@ function NaturalLanguageInterface() {
   const [useOpenSource, setUseOpenSource] = useState(false);
   const [openSourceUrl, setOpenSourceUrl] = useState("");
   const chatContainerRef = useRef(null);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
 
   // For demo/test purposes, set default token addresses
   const [tokenInAddress, setTokenInAddress] = useState(MAINNET_TOKENS.DAI);
@@ -271,13 +272,6 @@ function NaturalLanguageInterface() {
       { sender: "ai", text: result.message, timestamp: new Date() },
     ]);
 
-    // If swap was successful, refresh balances
-    if (result.success) {
-      setTimeout(() => {
-        tokenIn.refetchBalance();
-        tokenOut.refetchBalance();
-      }, 2000);
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -301,8 +295,7 @@ function NaturalLanguageInterface() {
       const requestBody = useOpenSource
         ? { message: userMessage, modelUrl: openSourceUrl }
         : { message: userMessage };
-
-      const response = await fetch(`http://localhost:3001${endpoint}`, {
+      const response = await fetch(`${API_HOST}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
