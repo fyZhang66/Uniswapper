@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { MAINNET_TOKENS } from "../constants/tokens";
+import { API_HOST } from "../constants/config"; // Import the API host
 import { useWriteContract, useAccount } from "wagmi";
 import { executeSwap } from "../utils/swapUtils";
 import { getPoolReserves, addLiquidityDirect, removeLiquidityDirect } from "../utils/poolUtils";
@@ -12,17 +13,21 @@ function NaturalLanguageInterface() {
   const [useOpenSource, setUseOpenSource] = useState(false);
   const [openSourceUrl, setOpenSourceUrl] = useState("");
   const chatContainerRef = useRef(null);
-  const [isVisible, setIsVisible] = useState(true);
-
-  // For demo/test purposes, set default token addresses
-  const [tokenInAddress, setTokenInAddress] = useState(MAINNET_TOKENS.DAI);
-  const [tokenOutAddress, setTokenOutAddress] = useState(MAINNET_TOKENS.ETH);
+  const [isVisible, setIsVisible] = useState(false);
 
   // Account
   const { address } = useAccount();
 
   // Direct contract writes
   const { writeContractAsync } = useWriteContract();
+
+  // Define addStatus once
+  const addStatus = (status) => {
+    setChatHistory((prev) => [
+      ...prev,
+      { sender: "ai", text: status, timestamp: new Date() },
+    ]);
+  };
 
   // Scroll to bottom of chat when history updates
   useEffect(() => {
@@ -39,14 +44,6 @@ function NaturalLanguageInterface() {
 
   // Direct implementation for getting pool reserves - replaced with imported function
   const handleGetPoolReserves = async ( tokenAAddr, tokenBAddr, tokenASymbol, tokenBSymbol ) => {
-    // Create status update callback function
-    const addStatus = (status) => {
-      setChatHistory((prev) => [
-        ...prev,
-        { sender: "ai", text: status, timestamp: new Date() },
-      ]);
-    };
-
     // Call the abstracted function from poolUtils.js
     await getPoolReserves(
       tokenAAddr,
@@ -92,13 +89,6 @@ function NaturalLanguageInterface() {
       ]);
     };
 
-    const addStatus = (status) => {
-      setChatHistory((prev) => [
-        ...prev,
-        { sender: "ai", text: status, timestamp: new Date() },
-      ]);
-    };
-
     switch (functionName) {
       case "swap_tokens": {
         // Get token addresses
@@ -113,10 +103,6 @@ function NaturalLanguageInterface() {
           );
           return;
         }
-
-        // Update state for tokens
-        setTokenInAddress(tokenInAddr);
-        setTokenOutAddress(tokenOutAddr);
 
         // Handle the swap using our utility function
         handleSwap(
@@ -257,12 +243,7 @@ function NaturalLanguageInterface() {
       tokenOutSymbol,
       userAddress: address,
       writeContractAsync,
-      onStatus: (status) => {
-        setChatHistory((prev) => [
-          ...prev,
-          { sender: "ai", text: status, timestamp: new Date() },
-        ]);
-      },
+      onStatus: addStatus, // Use the component-level addStatus
     });
 
     // Update UI based on result
@@ -301,8 +282,7 @@ function NaturalLanguageInterface() {
       const requestBody = useOpenSource
         ? { message: userMessage, modelUrl: openSourceUrl }
         : { message: userMessage };
-
-      const response = await fetch(`http://localhost:3001${endpoint}`, {
+      const response = await fetch(`${API_HOST}${endpoint}`, { // Use the imported API_HOST
         method: "POST",
         headers: {
           "Content-Type": "application/json",
