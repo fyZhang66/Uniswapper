@@ -4,6 +4,35 @@ import { ROUTER_ABI, FACTORY_ABI, CONTRACTS } from '../constants/contracts';
 import config from '../config/wagmiConfig';
 
 /**
+ * Check if a liquidity pair exists for two tokens
+ * @param {string} tokenA - Address of first token
+ * @param {string} tokenB - Address of second token
+ * @returns {Promise<{exists: boolean, pairAddress: string}>}
+ */
+export const checkPairExists = async (tokenA, tokenB) => {
+  try {
+    const pairAddress = await readContract(config, {
+      address: CONTRACTS.FACTORY,
+      abi: FACTORY_ABI,
+      functionName: 'getPair',
+      args: [tokenA, tokenB],
+    });
+    
+    const exists = pairAddress && pairAddress !== '0x0000000000000000000000000000000000000000';
+    return {
+      exists,
+      pairAddress
+    };
+  } catch (error) {
+    console.error("Error checking pair existence:", error);
+    return {
+      exists: false,
+      pairAddress: null
+    };
+  }
+};
+
+/**
  * Execute a token swap on Uniswap
  * @param {Object} params - Swap parameters
  * @param {string} params.tokenInAddr - Address of token to swap from
@@ -40,14 +69,9 @@ export const executeSwap = async ({
     onStatus?.(`Processing swap: ${inputAmount} ${tokenInSymbol} → ${tokenOutSymbol}`);
     
     // Step 1: Check if pair exists by getting pair address from factory
-    const pairAddress = await readContract(config, {
-      address: CONTRACTS.FACTORY,
-      abi: FACTORY_ABI,
-      functionName: 'getPair',
-      args: [tokenInAddr, tokenOutAddr],
-    });
+    const { exists, pairAddress } = await checkPairExists(tokenInAddr, tokenOutAddr);
     
-    if (!pairAddress || pairAddress === '0x0000000000000000000000000000000000000000') {
+    if (!exists) {
       return { success: false, message: `Error: No liquidity pool exists for ${tokenInSymbol}-${tokenOutSymbol}` };
     }
     
