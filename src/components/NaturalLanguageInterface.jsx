@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { MAINNET_TOKENS } from "../constants/tokens";
-import { useToken } from "../hooks/useToken";
 import { useWriteContract, useAccount } from "wagmi";
 import { executeSwap } from "../utils/swapUtils";
-import { getPoolReserves } from "../utils/poolUtils";
+import { getPoolReserves, addLiquidityDirect, removeLiquidityDirect } from "../utils/poolUtils";
+import { approveToken } from "../utils/tokenUtils";
 
 function NaturalLanguageInterface() {
   const [message, setMessage] = useState("");
@@ -20,10 +20,6 @@ function NaturalLanguageInterface() {
 
   // Account
   const { address } = useAccount();
-
-  // Initialize hooks for tokens
-  const tokenIn = useToken(tokenInAddress);
-  const tokenOut = useToken(tokenOutAddress);
 
   // Direct contract writes
   const { writeContractAsync } = useWriteContract();
@@ -96,6 +92,13 @@ function NaturalLanguageInterface() {
       ]);
     };
 
+    const addStatus = (status) => {
+      setChatHistory((prev) => [
+        ...prev,
+        { sender: "ai", text: status, timestamp: new Date() },
+      ]);
+    };
+
     switch (functionName) {
       case "swap_tokens": {
         // Get token addresses
@@ -129,77 +132,73 @@ function NaturalLanguageInterface() {
       }
 
       case "add_liquidity": {
-        // Get token addresses
         const tokenAAddr = getTokenAddress(args.tokenA);
         const tokenBAddr = getTokenAddress(args.tokenB);
 
         if (!tokenAAddr || !tokenBAddr) {
-          addResponse(
-            `Error: Unknown token: ${!tokenAAddr ? args.tokenA : args.tokenB}`
-          );
+          addResponse(`Error: Unknown token: ${!tokenAAddr ? args.tokenA : args.tokenB}`);
+          return;
+        }
+        if (!address) {
+          addResponse("Error: Wallet not connected.");
           return;
         }
 
-        // Update state
-        setTokenInAddress(tokenAAddr);
-        setTokenOutAddress(tokenBAddr);
-
-        // Execute add liquidity directly
-        addResponse(
-          `Adding liquidity: ${args.amountA} ${args.tokenA} and ${
-            args.amountB
-          } ${args.tokenB} (slippage: ${args.slippageTolerance || 0.5}%)`
-        );
-
-        // Use the addLiquidity function from the hook
-        addLiquidity(
+        addLiquidityDirect(
+          tokenAAddr,
+          tokenBAddr,
           args.amountA.toString(),
           args.amountB.toString(),
-          args.slippageTolerance || 0.5
+          args.slippageTolerance || 0.5,
+          address, // Pass user address
+          writeContractAsync, // Pass contract write function
+          (tokenAddr, spenderAddr, amount) => approveToken(tokenAddr, spenderAddr, amount, writeContractAsync, addStatus), // Pass the imported approveToken
+          addStatus // Pass status update function
         )
-          .then(() => {
-            addResponse(
-              `Successfully added liquidity: ${args.amountA} ${args.tokenA} and ${args.amountB} ${args.tokenB}`
-            );
+          .then(result => {
+            addResponse(result.message);
+            // Optionally refresh balances on success
+            if (result.success) {
+              // You might need a way to refetch balances without the useToken hook's refetch
+              // or trigger a page refresh/update mechanism.
+            }
           })
-          .catch((error) => {
-            addResponse(`Error adding liquidity: ${error.message}`);
+          .catch(error => {
+             // Error is already logged and added to status in the utility function
+             console.error("Add liquidity execution failed:", error);
           });
         break;
       }
 
       case "remove_liquidity": {
-        // Get token addresses
         const tokenARmAddr = getTokenAddress(args.tokenA);
         const tokenBRmAddr = getTokenAddress(args.tokenB);
 
         if (!tokenARmAddr || !tokenBRmAddr) {
-          addResponse(
-            `Error: Unknown token: ${!tokenARmAddr ? args.tokenA : args.tokenB}`
-          );
+          addResponse(`Error: Unknown token: ${!tokenARmAddr ? args.tokenA : args.tokenB}`);
+          return;
+        }
+        if (!address) {
+          addResponse("Error: Wallet not connected.");
           return;
         }
 
-        // Update state
-        setTokenInAddress(tokenARmAddr);
-        setTokenOutAddress(tokenBRmAddr);
-
-        // Execute remove liquidity directly
-        addResponse(
-          `Removing liquidity: ${args.lpAmount} LP tokens from ${args.tokenA}-${
-            args.tokenB
-          } pool (slippage: ${args.slippageTolerance || 0.5}%)`
-        );
-
-        // Use the removeLiquidity function from the hook
-        removeLiquidity(args.lpAmount.toString(), args.slippageTolerance || 0.5)
-          .then(() => {
-            addResponse(
-              `Successfully removed liquidity: ${args.lpAmount} LP tokens from ${args.tokenA}-${args.tokenB} pool`
-            );
+        removeLiquidityDirect(
+          tokenARmAddr,
+          tokenBRmAddr,
+          args.lpAmount.toString(),
+          args.slippageTolerance || 0.5,
+          address,
+          writeContractAsync,
+          (tokenAddr, spenderAddr, amount) => approveToken(tokenAddr, spenderAddr, amount, writeContractAsync, addStatus), // Pass the imported approveToken
+          addStatus
+        )
+          .then(result => {
+            addResponse(result.message);
+            // Optionally refresh balances on success
           })
-          .catch((error) => {
-            addResponse(`Error removing liquidity: ${error.message}`);
+          .catch(error => {
+            console.error("Remove liquidity execution failed:", error);
           });
         break;
       }
@@ -256,8 +255,6 @@ function NaturalLanguageInterface() {
       slippageTolerance,
       tokenInSymbol,
       tokenOutSymbol,
-      tokenIn,
-      tokenOut,
       userAddress: address,
       writeContractAsync,
       onStatus: (status) => {
