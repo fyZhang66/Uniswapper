@@ -2,11 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { MAINNET_TOKENS } from "../constants/tokens";
 import { useToken } from "../hooks/useToken";
 import { useWriteContract, useAccount } from "wagmi";
-import { executeSwap, checkPairExists } from "../utils/swapUtils";
-import { parseUnits, formatUnits } from "viem";
-import { readContract } from "@wagmi/core";
-import { ROUTER_ABI, PAIR_ABI, CONTRACTS } from "../constants/contracts";
-import config from "../config/wagmiConfig";
+import { executeSwap } from "../utils/swapUtils";
+import { getPoolReserves } from "../utils/poolUtils";
 
 function NaturalLanguageInterface() {
   const [message, setMessage] = useState("");
@@ -44,14 +41,9 @@ function NaturalLanguageInterface() {
     setIsVisible(!isVisible);
   };
 
-  // Direct implementation for getting pool reserves
-  const handleGetPoolReserves = async (
-    tokenAAddr,
-    tokenBAddr,
-    tokenASymbol,
-    tokenBSymbol
-  ) => {
-    // Add status update
+  // Direct implementation for getting pool reserves - replaced with imported function
+  const handleGetPoolReserves = async ( tokenAAddr, tokenBAddr, tokenASymbol, tokenBSymbol ) => {
+    // Create status update callback function
     const addStatus = (status) => {
       setChatHistory((prev) => [
         ...prev,
@@ -59,117 +51,14 @@ function NaturalLanguageInterface() {
       ]);
     };
 
-    try {
-      addStatus(
-        `Fetching current reserves for ${tokenASymbol}-${tokenBSymbol} pool...`
-      );
-
-      // Step 1: Check if pair exists
-      const { exists, pairAddress } = await checkPairExists(
-        tokenAAddr,
-        tokenBAddr
-      );
-
-      if (!exists) {
-        addStatus(
-          `No liquidity pool exists for ${tokenASymbol}-${tokenBSymbol}`
-        );
-        return;
-      }
-
-      // Step 2: Get token decimals directly without using hooks
-      let tokenADecimals = 18;
-      let tokenBDecimals = 18;
-
-      try {
-        // Get token decimals by direct contract call instead of using hooks
-        const tokenADecimalsResult = await readContract(config, {
-          address: tokenAAddr,
-          abi: [
-            {
-              inputs: [],
-              name: "decimals",
-              outputs: [{ type: "uint8" }],
-              stateMutability: "view",
-              type: "function",
-            },
-          ],
-          functionName: "decimals",
-        });
-        tokenADecimals = tokenADecimalsResult;
-
-        const tokenBDecimalsResult = await readContract(config, {
-          address: tokenBAddr,
-          abi: [
-            {
-              inputs: [],
-              name: "decimals",
-              outputs: [{ type: "uint8" }],
-              stateMutability: "view",
-              type: "function",
-            },
-          ],
-          functionName: "decimals",
-        });
-        tokenBDecimals = tokenBDecimalsResult;
-      } catch (error) {
-        console.error("Error fetching token decimals:", error);
-        // Continue with default 18 decimals
-      }
-
-      // Step 3: Get reserves for the pair
-      const reservesData = await readContract(config, {
-        address: pairAddress,
-        abi: PAIR_ABI,
-        functionName: "getReserves",
-      });
-
-      // Step 4: Determine which token is token0 and token1
-      const token0 = await readContract(config, {
-        address: pairAddress,
-        abi: PAIR_ABI,
-        functionName: "token0",
-      });
-
-      const isAToken0 = token0.toLowerCase() === tokenAAddr.toLowerCase();
-
-      // Step 5: Format reserves with correct decimals
-      const formattedReservesA = formatUnits(
-        isAToken0 ? reservesData[0] : reservesData[1],
-        tokenADecimals
-      );
-
-      const formattedReservesB = formatUnits(
-        isAToken0 ? reservesData[1] : reservesData[0],
-        tokenBDecimals
-      );
-
-      // Step 6: Add formatted reserves to chat
-      addStatus(`Current reserves for ${tokenASymbol}-${tokenBSymbol} pool:
-        - ${tokenASymbol}: ${parseFloat(formattedReservesA).toFixed(6)}
-        - ${tokenBSymbol}: ${parseFloat(formattedReservesB).toFixed(6)}`);
-
-      // Step 7: Display additional information if available
-      try {
-        const totalSupply = await readContract(config, {
-          address: pairAddress,
-          abi: PAIR_ABI,
-          functionName: "totalSupply",
-        });
-
-        const formattedTotalSupply = formatUnits(totalSupply, 18); // LP tokens have 18 decimals
-
-        addStatus(`Additional pool information:
-          - Pair address: ${pairAddress}
-          - Total LP tokens: ${parseFloat(formattedTotalSupply).toFixed(6)}
-          - Last updated: Block timestamp ${reservesData[2]}`);
-      } catch (error) {
-        console.error("Error fetching additional pool info:", error);
-      }
-    } catch (error) {
-      console.error("Error fetching pool reserves:", error);
-      addStatus(`Error fetching pool reserves: ${error.message}`);
-    }
+    // Call the abstracted function from poolUtils.js
+    await getPoolReserves(
+      tokenAAddr,
+      tokenBAddr,
+      tokenASymbol,
+      tokenBSymbol,
+      addStatus
+    );
   };
 
   // Function to execute based on NL interface output
@@ -468,12 +357,23 @@ function NaturalLanguageInterface() {
   if (!isVisible) {
     return (
       <div className="fixed bottom-6 right-6 z-50">
-        <button 
+        <button
           onClick={toggleChatVisibility}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg flex items-center justify-center"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+            />
           </svg>
         </button>
       </div>
@@ -481,9 +381,9 @@ function NaturalLanguageInterface() {
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 pointer-events-none"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
     >
       <div className="flex items-center justify-center h-full">
         <div className="w-full max-w-[50%] flex flex-col h-[500px] rounded-lg bg-gray-800 border border-gray-700 shadow-2xl pointer-events-auto">
@@ -508,20 +408,31 @@ function NaturalLanguageInterface() {
                   className="bg-gray-700 border border-gray-600 rounded text-xs w-24 px-2 py-1"
                 />
               )}
-              <button 
+              <button
                 onClick={toggleChatVisibility}
                 className="ml-2 text-gray-400 hover:text-white"
                 title="Close"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
           </div>
-          
+
           {/* Chat messages container */}
-          <div 
+          <div
             ref={chatContainerRef}
             className="flex-1 overflow-y-auto p-4 space-y-4"
           >
@@ -550,10 +461,14 @@ function NaturalLanguageInterface() {
                         : "bg-gray-700 text-white rounded-tl-none"
                     }`}
                   >
-                    <div className="text-sm whitespace-pre-line">{chat.text}</div>
+                    <div className="text-sm whitespace-pre-line">
+                      {chat.text}
+                    </div>
                     <div
                       className={`text-xs mt-1 ${
-                        chat.sender === "user" ? "text-blue-200" : "text-gray-400"
+                        chat.sender === "user"
+                          ? "text-blue-200"
+                          : "text-gray-400"
                       }`}
                     >
                       {formatTime(chat.timestamp)}
@@ -563,9 +478,12 @@ function NaturalLanguageInterface() {
               ))
             )}
           </div>
-          
+
           {/* Message input form */}
-          <form onSubmit={handleSubmit} className="border-t border-gray-700 p-3">
+          <form
+            onSubmit={handleSubmit}
+            className="border-t border-gray-700 p-3"
+          >
             <div className="flex items-center">
               <input
                 type="text"
